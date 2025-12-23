@@ -1,0 +1,1 @@
+ffmpeg -i input.mp4 -vf "scale=320:240:force_original_aspect_ratio=increase,crop=320:240,setsar=1:1,fps=15" -t 00:00:30 -vcodec mjpeg -q:v 24 -pix_fmt yuvj420p -an output.mjpeg
