@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define ENABLE_STORAGE 1 // No storage for simulator
+#define ENABLE_STORAGE 0 // No storage for simulator
 
 #if ENABLE_STORAGE
 #include "libs/storage.h"
@@ -24,6 +24,16 @@ typedef struct {
 	size_t size;
 	size_t pos;
 } memdev_t;
+
+static void fill_composed_buf(eadk_color_t *buf, size_t n, eadk_color_t val) {
+	if (!buf || n == 0) return;
+	size_t i = 0;
+	uint32_t v32 = ((uint32_t)val << 16) | (uint32_t)val;
+	uint32_t *p32 = (uint32_t *)buf;
+	size_t n32 = n / 2;
+	for (i = 0; i < n32; i++) p32[i] = v32;
+	if (n & 1) buf[n - 1] = val;
+}
 
 static size_t infunc(JDEC* jd, uint8_t* buff, size_t ndata) {
 	memdev_t* dev = (memdev_t*)jd->device;
@@ -61,23 +71,36 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 			eadk_display_wait_for_vblank();
 			#endif
 			
-			eadk_display_push_rect(rct, composed_buf);
-			
-			for (size_t i = 0; i < (COMPOSE_W * COMPOSE_H); i++) composed_buf[i] = eadk_color_white;
+				eadk_display_push_rect(rct, composed_buf);
+				fill_composed_buf(composed_buf, (COMPOSE_W * COMPOSE_H), eadk_color_white);
 			composed_blocks = 0;
 			current_band = rect_band;
 		}
 
-		for (uint16_t row = 0; row < h; row++) {
-			for (uint16_t col = 0; col < w; col++) {
-				uint16_t pix = src[row * w + col];
-				if (jd && jd->swap)
+		bool swap = (jd && jd->swap) ? true : false;
+		if (swap) {
+			for (uint16_t row = 0; row < h; row++) {
+				for (uint16_t col = 0; col < w; col++) {
+					uint16_t pix = src[row * w + col];
 					pix = (pix >> 8) | (pix << 8);
-				uint16_t dx = (uint16_t)rect->left + col;
-				uint16_t dy = (uint16_t)rect->top + row;
-				if (dx < COMPOSE_W && dy >= (current_band * COMPOSE_H) && dy < ((current_band + 1) * COMPOSE_H)) {
-					uint16_t band_y = dy - (current_band * COMPOSE_H);
-					composed_buf[band_y * COMPOSE_W + dx] = (eadk_color_t)pix;
+					uint16_t dx = (uint16_t)rect->left + col;
+					uint16_t dy = (uint16_t)rect->top + row;
+					if (dx < COMPOSE_W && dy >= (current_band * COMPOSE_H) && dy < ((current_band + 1) * COMPOSE_H)) {
+						uint16_t band_y = dy - (current_band * COMPOSE_H);
+						composed_buf[band_y * COMPOSE_W + dx] = (eadk_color_t)pix;
+					}
+				}
+			}
+		} else {
+			for (uint16_t row = 0; row < h; row++) {
+				for (uint16_t col = 0; col < w; col++) {
+					uint16_t pix = src[row * w + col];
+					uint16_t dx = (uint16_t)rect->left + col;
+					uint16_t dy = (uint16_t)rect->top + row;
+					if (dx < COMPOSE_W && dy >= (current_band * COMPOSE_H) && dy < ((current_band + 1) * COMPOSE_H)) {
+						uint16_t band_y = dy - (current_band * COMPOSE_H);
+						composed_buf[band_y * COMPOSE_W + dx] = (eadk_color_t)pix;
+					}
 				}
 			}
 		}
@@ -89,8 +112,8 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 				#if ENABLE_VBLANK
 				eadk_display_wait_for_vblank();
 				#endif
-				eadk_display_push_rect(rct, composed_buf);
-				for (size_t i = 0; i < (COMPOSE_W * COMPOSE_H); i++) composed_buf[i] = eadk_color_white;
+					eadk_display_push_rect(rct, composed_buf);
+					fill_composed_buf(composed_buf, (COMPOSE_W * COMPOSE_H), eadk_color_white);
 				composed_blocks = 0;
 				if (current_band < (BANDS - 1)) current_band++;
 				else current_band = 0;
@@ -168,8 +191,6 @@ int main(void) {
 	}
 	#endif
 
-	uint64_t first_frame_ts_ms = eadk_timing_millis();
-
 	for (;;) {
 		size_t p = 0;
 		while (p + 1 < dev.size) {
@@ -211,11 +232,9 @@ int main(void) {
 			}
 
 			//----------------------------
-
+			
 			uint64_t end_frame_ts_ms = eadk_timing_millis();
-
 			uint64_t frame_duration_ms = end_frame_ts_ms - start_frame_ts_ms;
-
 			int sleep_ms = (1000 / target_fps) > frame_duration_ms ? (1000 / target_fps) - frame_duration_ms : 0;
 
 			if (debug){
@@ -234,11 +253,13 @@ int main(void) {
 
 				snprintf(buf, sizeof(buf), "sleep_ms: %d", (int)(sleep_ms));
 				eadk_display_draw_string(buf, (eadk_point_t){0, 48}, false, eadk_color_black, eadk_color_white);
-		
-				snprintf(buf, sizeof(buf), "fps_no_cap: %d", (int)(1000 / frame_duration_ms));
+
+				int fps_no_cap = frame_duration_ms ? (int)(1000 / frame_duration_ms) : 0;
+				int fps_capped = (frame_duration_ms + sleep_ms) ? (int)(1000 / (frame_duration_ms + sleep_ms)) : 0;
+				snprintf(buf, sizeof(buf), "fps_no_cap: %d", fps_no_cap);
 				eadk_display_draw_string(buf, (eadk_point_t){0, 60}, false, eadk_color_black, eadk_color_white);
 
-				snprintf(buf, sizeof(buf), "fps_capped: %d", (int)(1000 / (frame_duration_ms + sleep_ms)));
+				snprintf(buf, sizeof(buf), "fps_capped: %d", fps_capped);
 				eadk_display_draw_string(buf, (eadk_point_t){0, 72}, false, eadk_color_black, eadk_color_white);
 			}
 
