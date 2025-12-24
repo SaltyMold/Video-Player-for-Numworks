@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define ENABLE_STORAGE 1 // No storage for simulator
+#define ENABLE_STORAGE 0 // No storage for simulator
 
 #if ENABLE_STORAGE
 #include "libs/storage.h"
@@ -50,21 +50,19 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 	uint16_t w = rect->right - rect->left + 1;
 	uint16_t h = rect->bottom - rect->top + 1;
 
-	enum { BLOCK_W = 16, BLOCK_H = 16, COLS = 20, ROWS = 5 };
+	enum { BLOCK_W = 16, BLOCK_H = 16, COLS = 20, ROWS = 3 };
 	enum { COMPOSE_W = COLS * BLOCK_W, COMPOSE_H = ROWS * BLOCK_H };
 
 	if (w > BLOCK_W || h > BLOCK_H) return 0;
 
 	uint16_t* src = (uint16_t*)bitmap;
 
-	 enum { BANDS = 3 };
-	 /* Double buffer: two composed areas in RAM. Alternating index avoids
-		 overwriting a buffer that is being pushed by the display driver. */
-	 static eadk_color_t composed_buf[2][COMPOSE_W * COMPOSE_H];
-	 static int composed_index = 0;
-	 static int composed_blocks = 0;
-	 static int current_band = 0;
-	 static int composed_inited = 0;
+	enum { BANDS = (EADK_SCREEN_HEIGHT + COMPOSE_H - 1) / COMPOSE_H };
+		static eadk_color_t composed_buf[2][COMPOSE_W * COMPOSE_H];
+		static int composed_index = 0;
+		static int composed_blocks = 0;
+		static int current_band = 0;
+		static int composed_inited = 0;
 
 		int rect_band = ((uint16_t)rect->top) / COMPOSE_H;
 		if (rect_band >= BANDS) rect_band = BANDS - 1;
@@ -123,7 +121,6 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 				eadk_display_wait_for_vblank();
 				#endif
 					eadk_display_push_rect(rct, composed_buf[composed_index]);
-					/* switch buffer and clear the new active buffer */
 					composed_index ^= 1;
 					fill_composed_buf(composed_buf[composed_index], (COMPOSE_W * COMPOSE_H), eadk_color_white);
 				composed_blocks = 0;
