@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define ENABLE_STORAGE 0 // No storage for simulator
+#define ENABLE_STORAGE 1 // No storage for simulator
 
 #if ENABLE_STORAGE
 #include "libs/storage.h"
@@ -71,8 +71,8 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 			eadk_display_wait_for_vblank();
 			#endif
 			
-				eadk_display_push_rect(rct, composed_buf);
-				fill_composed_buf(composed_buf, (COMPOSE_W * COMPOSE_H), eadk_color_white);
+			eadk_display_push_rect(rct, composed_buf);
+			fill_composed_buf(composed_buf, (COMPOSE_W * COMPOSE_H), eadk_color_white);
 			composed_blocks = 0;
 			current_band = rect_band;
 		}
@@ -82,17 +82,23 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 			uint16_t left = (uint16_t)rect->left;
 			uint16_t top = (uint16_t)rect->top;
 			uint16_t band_top = (uint16_t)(current_band * COMPOSE_H);
+			uint16_t max_col_bound = (left >= COMPOSE_W) ? 0 : (COMPOSE_W - left);
 			for (uint16_t row = 0; row < h; row++) {
 				uint16_t dy = top + row;
 				if (dy < band_top || dy >= (band_top + COMPOSE_H)) continue;
+				if (max_col_bound == 0) continue;
 				uint16_t band_y = dy - band_top;
 				eadk_color_t *dest_row = &composed_buf[band_y * COMPOSE_W];
 				uint16_t *src_row = &src[row * w];
-				for (uint16_t col = 0; col < w; col++) {
-					uint16_t pix = src_row[col];
-					if (swap) pix = (pix >> 8) | (pix << 8);
-					uint16_t dx = left + col;
-					if (dx < COMPOSE_W) dest_row[dx] = (eadk_color_t)pix;
+				uint16_t col_max = w < max_col_bound ? w : max_col_bound;
+				if (!swap) {
+					memcpy(&dest_row[left], src_row, (size_t)col_max * sizeof(uint16_t));
+				} else {
+					for (uint16_t col = 0; col < col_max; col++) {
+						uint16_t pix = src_row[col];
+						pix = (pix >> 8) | (pix << 8);
+						dest_row[left + col] = (eadk_color_t)pix;
+					}
 				}
 			}
 		}
