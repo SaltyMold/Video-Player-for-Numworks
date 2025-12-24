@@ -78,29 +78,21 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 		}
 
 		bool swap = (jd && jd->swap) ? true : false;
-		if (swap) {
+		{
+			uint16_t left = (uint16_t)rect->left;
+			uint16_t top = (uint16_t)rect->top;
+			uint16_t band_top = (uint16_t)(current_band * COMPOSE_H);
 			for (uint16_t row = 0; row < h; row++) {
+				uint16_t dy = top + row;
+				if (dy < band_top || dy >= (band_top + COMPOSE_H)) continue;
+				uint16_t band_y = dy - band_top;
+				eadk_color_t *dest_row = &composed_buf[band_y * COMPOSE_W];
+				uint16_t *src_row = &src[row * w];
 				for (uint16_t col = 0; col < w; col++) {
-					uint16_t pix = src[row * w + col];
-					pix = (pix >> 8) | (pix << 8);
-					uint16_t dx = (uint16_t)rect->left + col;
-					uint16_t dy = (uint16_t)rect->top + row;
-					if (dx < COMPOSE_W && dy >= (current_band * COMPOSE_H) && dy < ((current_band + 1) * COMPOSE_H)) {
-						uint16_t band_y = dy - (current_band * COMPOSE_H);
-						composed_buf[band_y * COMPOSE_W + dx] = (eadk_color_t)pix;
-					}
-				}
-			}
-		} else {
-			for (uint16_t row = 0; row < h; row++) {
-				for (uint16_t col = 0; col < w; col++) {
-					uint16_t pix = src[row * w + col];
-					uint16_t dx = (uint16_t)rect->left + col;
-					uint16_t dy = (uint16_t)rect->top + row;
-					if (dx < COMPOSE_W && dy >= (current_band * COMPOSE_H) && dy < ((current_band + 1) * COMPOSE_H)) {
-						uint16_t band_y = dy - (current_band * COMPOSE_H);
-						composed_buf[band_y * COMPOSE_W + dx] = (eadk_color_t)pix;
-					}
+					uint16_t pix = src_row[col];
+					if (swap) pix = (pix >> 8) | (pix << 8);
+					uint16_t dx = left + col;
+					if (dx < COMPOSE_W) dest_row[dx] = (eadk_color_t)pix;
 				}
 			}
 		}
