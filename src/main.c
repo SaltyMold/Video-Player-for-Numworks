@@ -1,8 +1,20 @@
 #include "libs/eadk.h"
-#include "libs/storage.h"
 #include "libs/TJpg_Decoder/tjpgd.h"
 #include <string.h>
 #include <stdlib.h>
+
+#define ENABLE_STORAGE 1 // No storage for simulator
+
+#if ENABLE_STORAGE
+#include "libs/storage.h"
+#endif
+
+#define ENABLE_VBLANK 0 // Don't use it. It add delay between push that generates tearing effect.
+
+#define SVG_FILE "video.svg"
+/*
+1st byte = target fps
+*/
 
 const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "Video Player";
 const uint32_t eadk_api_level  __attribute__((section(".rodata.eadk_api_level"))) = 0;
@@ -15,7 +27,6 @@ typedef struct {
 
 static size_t infunc(JDEC* jd, uint8_t* buff, size_t ndata) {
 	memdev_t* dev = (memdev_t*)jd->device;
-	if (!dev || !dev->data || dev->pos >= dev->size) return 0;
 	size_t remain = dev->size - dev->pos;
 	size_t rc = ndata < remain ? ndata : remain;
 	if (buff) memcpy(buff, dev->data + dev->pos, rc);
@@ -25,26 +36,72 @@ static size_t infunc(JDEC* jd, uint8_t* buff, size_t ndata) {
 
 static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 	if (!bitmap || !rect) return 0;
+
 	uint16_t w = rect->right - rect->left + 1;
 	uint16_t h = rect->bottom - rect->top + 1;
 
-	static eadk_color_t linebuf[320];
-	if (w > 320) return 0; 
+	enum { BLOCK_W = 16, BLOCK_H = 16, COLS = 20, ROWS = 5 };
+	enum { COMPOSE_W = COLS * BLOCK_W, COMPOSE_H = ROWS * BLOCK_H };
 
-	for (uint16_t row = 0; row < h; row++) {
-		uint16_t* src16 = (uint16_t*)((uint8_t*)bitmap + (size_t)row * (size_t)w * 2);
-		for (uint16_t x = 0; x < w; x++) {
-			uint16_t pix = src16[x];
-			if (jd && jd->swap) pix = (uint16_t)((pix >> 8) | (pix << 8));
-			linebuf[x] = (eadk_color_t)pix;
+	if (w > BLOCK_W || h > BLOCK_H) return 0;
+
+	uint16_t* src = (uint16_t*)bitmap;
+
+	enum { BANDS = 3 };
+	static eadk_color_t composed_buf[COMPOSE_W * COMPOSE_H];
+	static int composed_blocks = 0; 
+	static int current_band = 0;
+
+		int rect_band = ((uint16_t)rect->top) / COMPOSE_H;
+		if (rect_band >= BANDS) rect_band = BANDS - 1;
+		if (rect_band != current_band && composed_blocks > 0) {
+			eadk_rect_t rct = { 0, (uint16_t)(current_band * COMPOSE_H), COMPOSE_W, COMPOSE_H };
+
+			#if ENABLE_VBLANK
+			eadk_display_wait_for_vblank();
+			#endif
+			
+			eadk_display_push_rect(rct, composed_buf);
+			
+			for (size_t i = 0; i < (COMPOSE_W * COMPOSE_H); i++) composed_buf[i] = eadk_color_white;
+			composed_blocks = 0;
+			current_band = rect_band;
 		}
-		eadk_rect_t rct = {(uint16_t)(rect->left), (uint16_t)(rect->top + row), w, 1};
-		eadk_display_push_rect(rct, linebuf);
-	}
+
+		for (uint16_t row = 0; row < h; row++) {
+			for (uint16_t col = 0; col < w; col++) {
+				uint16_t pix = src[row * w + col];
+				if (jd && jd->swap)
+					pix = (pix >> 8) | (pix << 8);
+				uint16_t dx = (uint16_t)rect->left + col;
+				uint16_t dy = (uint16_t)rect->top + row;
+				if (dx < COMPOSE_W && dy >= (current_band * COMPOSE_H) && dy < ((current_band + 1) * COMPOSE_H)) {
+					uint16_t band_y = dy - (current_band * COMPOSE_H);
+					composed_buf[band_y * COMPOSE_W + dx] = (eadk_color_t)pix;
+				}
+			}
+		}
+
+		if (w == BLOCK_W && h == BLOCK_H) {
+			composed_blocks++;
+			if (composed_blocks >= (COLS * ROWS)) {
+				eadk_rect_t rct = { 0, (uint16_t)(current_band * COMPOSE_H), COMPOSE_W, COMPOSE_H };
+				#if ENABLE_VBLANK
+				eadk_display_wait_for_vblank();
+				#endif
+				eadk_display_push_rect(rct, composed_buf);
+				for (size_t i = 0; i < (COMPOSE_W * COMPOSE_H); i++) composed_buf[i] = eadk_color_white;
+				composed_blocks = 0;
+				if (current_band < (BANDS - 1)) current_band++;
+				else current_band = 0;
+			}
+		}
+
 	return 1;
 }
 
-static uint8_t jd_workbuf[48 * 1024];
+
+static uint8_t jd_workbuf[TJPGD_WORKSPACE_SIZE];
 
 extern const char* eadk_external_data;
 extern size_t eadk_external_data_size;
@@ -68,33 +125,59 @@ int change_target_fps(int target_fps) {
 		eadk_timing_msleep(100);
 	}
 
+	#if ENABLE_STORAGE
+		extapp_fileErase(SVG_FILE);
+		extapp_fileWrite(SVG_FILE, (const char*)&target_fps, 1);
+	#endif
+
 	return target_fps;
+}
+
+void menu(){
+	eadk_display_draw_string("This screen will no longer show up.", (eadk_point_t){0, 0}, false, eadk_color_white, eadk_color_black);
+	eadk_display_draw_string("Press BACK to quit the app.", (eadk_point_t){0, 20}, false, eadk_color_white, eadk_color_black);
+	eadk_display_draw_string("Press shift to change FPS", (eadk_point_t){0, 40}, false, eadk_color_white, eadk_color_black);
+	eadk_display_draw_string("Press EXE to enable debug info", (eadk_point_t){0, 60}, false, eadk_color_white, eadk_color_black);
+	eadk_display_draw_string("Press OK to continue", (eadk_point_t){0, 80}, true, eadk_color_white, eadk_color_black);
+	
+	eadk_timing_msleep(2000);
+	while (!eadk_keyboard_key_down(eadk_keyboard_scan(), eadk_key_ok));
 }
 
 int main(void) {
 	eadk_display_push_rect_uniform(eadk_screen_rect, eadk_color_white);
-
-	if (!eadk_external_data || eadk_external_data_size == 0) {
-		eadk_display_draw_string("No external data", (eadk_point_t){10,10}, true, eadk_color_white, eadk_color_black);
-		while (1) eadk_keyboard_scan();
-	}
 
 	memdev_t dev;
 	dev.data = (const uint8_t*)eadk_external_data;
 	dev.size = eadk_external_data_size;
 	dev.pos = 0;
 
-	int target_fps = 10;
+	int target_fps = 15;
+
+	#if ENABLE_STORAGE 
+	if (extapp_fileExists(SVG_FILE)) {
+		size_t fps_len = 0;
+		const char* fps_data = extapp_fileRead(SVG_FILE, &fps_len);
+		if (fps_data != NULL && fps_len > 0) {
+			target_fps = (int)((uint8_t)fps_data[0]);
+		}
+	}
+	else {
+		menu();
+		extapp_fileWrite(SVG_FILE, (const char*)&target_fps, 1);
+	}
+	#endif
+
 	uint64_t first_frame_ts_ms = eadk_timing_millis();
 
 	for (;;) {
 		size_t p = 0;
-		bool found_any = false;
-
 		while (p + 1 < dev.size) {
 			bool debug = false;
-			if (eadk_keyboard_key_down(eadk_keyboard_scan(), eadk_key_exe)) debug = true;
-			if (eadk_keyboard_key_down(eadk_keyboard_scan(), eadk_key_shift)) target_fps = change_target_fps(target_fps);
+			eadk_keyboard_state_t state = eadk_keyboard_scan();
+			if (eadk_keyboard_key_down(state, eadk_key_exe)) debug = true;
+			if (eadk_keyboard_key_down(state, eadk_key_shift)) target_fps = change_target_fps(target_fps);
+			if (eadk_keyboard_key_down(state, eadk_key_back)) return 0;
 
 			uint64_t start_frame_ts_ms = eadk_timing_millis();
 			
@@ -112,7 +195,6 @@ int main(void) {
 			}
 			if (eoi == (size_t)-1) break;
 
-			found_any = true;
 			size_t frame_start = soi;
 			size_t frame_len = eoi - soi + 1;
 
@@ -127,8 +209,6 @@ int main(void) {
 			if (res == JDR_OK) {
 				jd_decomp(&jd, outfunc, 0);
 			}
-
-			if (eadk_keyboard_key_down(eadk_keyboard_scan(), eadk_key_back)) return 0;
 
 			//----------------------------
 
@@ -164,8 +244,6 @@ int main(void) {
 
 			eadk_timing_msleep(sleep_ms);
 		}
-		if (!found_any) break;
 	}
-	while (1) eadk_keyboard_scan();
 	return 0;
 }
