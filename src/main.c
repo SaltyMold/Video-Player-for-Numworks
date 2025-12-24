@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define ENABLE_STORAGE 0 // No storage for simulator
+#define ENABLE_STORAGE 1 // No storage for simulator
 
 #if ENABLE_STORAGE
 #include "libs/storage.h"
@@ -79,7 +79,6 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 			eadk_display_wait_for_vblank();
 			#endif
 
-			/* push the buffer we've been composing, then switch to the other */
 			eadk_display_push_rect(rct, composed_buf[composed_index]);
 			composed_index ^= 1;
 			fill_composed_buf(composed_buf[composed_index], (COMPOSE_W * COMPOSE_H), eadk_color_white);
@@ -242,7 +241,6 @@ int main(void) {
 			  eadk_display_push_rect_uniform(eadk_screen_rect, eadk_color_white);
 			  eadk_display_draw_string(errbuf, (eadk_point_t){0,0}, true, eadk_color_black, eadk_color_white);
 			  eadk_timing_msleep(1000);
-			  // skip this frame
 			} else {
 			  jd_decomp(&jd, outfunc, 0);
 			}

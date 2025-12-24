@@ -1,8 +1,10 @@
-ffmpeg -i input.mp4 -vf "scale=320:240:force_original_aspect_ratio=increase,crop=320:240,setsar=1:1,fps=10" -t 00:00:30 -vcodec mjpeg -q:v 24 -an output.mjpeg
+ffmpeg -i input.mp4 -vf "scale=320:240:force_original_aspect_ratio=increase,crop=320:240,setsar=1:1,fps=10" -t 00:00:30 -vcodec mjpeg -q:v 24 -an output.mjpeg # with crop
+
+ffmpeg -i input.mp4 -vf "scale=320:240:force_original_aspect_ratio=increase,setsar=1:1,fps=10" -t 00:00:30 -vcodec mjpeg -q:v 24 -an output.mjpeg # without crop
 
 # 320*240 15fps t30 q24 = 1242Ko
 # 320*240 10fps t30 q24 = 831Ko
 
 # poid ~ = longeur * largeur * fps * duree * facteur
 
-# q24 facteur = 23 / 640_000
+# q24 facteur NeverGonnaGiveYouUp = 23 / 640_000
