@@ -239,8 +239,15 @@ int main(void) {
 			JDEC jd;
 			memset(&jd, 0, sizeof(jd));
 			JRESULT res = jd_prepare(&jd, infunc, jd_workbuf, sizeof(jd_workbuf), &frame_dev);
-			if (res == JDR_OK) {
-				jd_decomp(&jd, outfunc, 0);
+			if (res != JDR_OK) {
+			  char errbuf[32];
+			  snprintf(errbuf, sizeof(errbuf), "JD prepare err: %d", (int)res);
+			  eadk_display_push_rect_uniform(eadk_screen_rect, eadk_color_white);
+			  eadk_display_draw_string(errbuf, (eadk_point_t){0,0}, true, eadk_color_black, eadk_color_white);
+			  eadk_timing_msleep(1000);
+			  // skip this frame
+			} else {
+			  jd_decomp(&jd, outfunc, 0);
 			}
 
 			//----------------------------
