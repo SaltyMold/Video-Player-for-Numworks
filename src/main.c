@@ -9,7 +9,7 @@
 #include "libs/storage.h"
 #endif
 
-#define ENABLE_VBLANK 0 // Don't use it. It add delay between push that generates tearing effect.
+#define ENABLE_VBLANK 0 // Don't use it. Add too delay
 
 #define SVG_FILE "video.svg"
 /*
@@ -57,50 +57,62 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 
 	uint16_t* src = (uint16_t*)bitmap;
 
-	enum { BANDS = 3 };
-	static eadk_color_t composed_buf[COMPOSE_W * COMPOSE_H];
-	static int composed_blocks = 0; 
-	static int current_band = 0;
+	 enum { BANDS = 3 };
+	 /* Double buffer: two composed areas in RAM. Alternating index avoids
+		 overwriting a buffer that is being pushed by the display driver. */
+	 static eadk_color_t composed_buf[2][COMPOSE_W * COMPOSE_H];
+	 static int composed_index = 0;
+	 static int composed_blocks = 0;
+	 static int current_band = 0;
+	 static int composed_inited = 0;
 
 		int rect_band = ((uint16_t)rect->top) / COMPOSE_H;
 		if (rect_band >= BANDS) rect_band = BANDS - 1;
+		if (!composed_inited) {
+			fill_composed_buf(composed_buf[0], (COMPOSE_W * COMPOSE_H), eadk_color_white);
+			fill_composed_buf(composed_buf[1], (COMPOSE_W * COMPOSE_H), eadk_color_white);
+			composed_inited = 1;
+		}
+
 		if (rect_band != current_band && composed_blocks > 0) {
 			eadk_rect_t rct = { 0, (uint16_t)(current_band * COMPOSE_H), COMPOSE_W, COMPOSE_H };
 
 			#if ENABLE_VBLANK
 			eadk_display_wait_for_vblank();
 			#endif
-			
-			eadk_display_push_rect(rct, composed_buf);
-			fill_composed_buf(composed_buf, (COMPOSE_W * COMPOSE_H), eadk_color_white);
+
+			/* push the buffer we've been composing, then switch to the other */
+			eadk_display_push_rect(rct, composed_buf[composed_index]);
+			composed_index ^= 1;
+			fill_composed_buf(composed_buf[composed_index], (COMPOSE_W * COMPOSE_H), eadk_color_white);
 			composed_blocks = 0;
 			current_band = rect_band;
 		}
 
 		bool swap = (jd && jd->swap) ? true : false;
 		{
-			uint16_t left = (uint16_t)rect->left;
-			uint16_t top = (uint16_t)rect->top;
-			uint16_t band_top = (uint16_t)(current_band * COMPOSE_H);
-			uint16_t max_col_bound = (left >= COMPOSE_W) ? 0 : (COMPOSE_W - left);
-			for (uint16_t row = 0; row < h; row++) {
-				uint16_t dy = top + row;
-				if (dy < band_top || dy >= (band_top + COMPOSE_H)) continue;
-				if (max_col_bound == 0) continue;
-				uint16_t band_y = dy - band_top;
-				eadk_color_t *dest_row = &composed_buf[band_y * COMPOSE_W];
-				uint16_t *src_row = &src[row * w];
-				uint16_t col_max = w < max_col_bound ? w : max_col_bound;
-				if (!swap) {
-					memcpy(&dest_row[left], src_row, (size_t)col_max * sizeof(uint16_t));
-				} else {
-					for (uint16_t col = 0; col < col_max; col++) {
-						uint16_t pix = src_row[col];
-						pix = (pix >> 8) | (pix << 8);
-						dest_row[left + col] = (eadk_color_t)pix;
+				uint16_t left = (uint16_t)rect->left;
+				uint16_t top = (uint16_t)rect->top;
+				uint16_t band_top = (uint16_t)(current_band * COMPOSE_H);
+				uint16_t max_col_bound = (left >= COMPOSE_W) ? 0 : (COMPOSE_W - left);
+				for (uint16_t row = 0; row < h; row++) {
+					uint16_t dy = top + row;
+					if (dy < band_top || dy >= (band_top + COMPOSE_H)) continue;
+					if (max_col_bound == 0) continue;
+					uint16_t band_y = dy - band_top;
+					eadk_color_t *dest_row = &composed_buf[composed_index][band_y * COMPOSE_W];
+					uint16_t *src_row = &src[row * w];
+					uint16_t col_max = w < max_col_bound ? w : max_col_bound;
+					if (!swap) {
+						memcpy(&dest_row[left], src_row, (size_t)col_max * sizeof(uint16_t));
+					} else {
+						for (uint16_t col = 0; col < col_max; col++) {
+							uint16_t pix = src_row[col];
+							pix = (pix >> 8) | (pix << 8);
+							dest_row[left + col] = (eadk_color_t)pix;
+						}
 					}
 				}
-			}
 		}
 
 		if (w == BLOCK_W && h == BLOCK_H) {
@@ -110,8 +122,10 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 				#if ENABLE_VBLANK
 				eadk_display_wait_for_vblank();
 				#endif
-					eadk_display_push_rect(rct, composed_buf);
-					fill_composed_buf(composed_buf, (COMPOSE_W * COMPOSE_H), eadk_color_white);
+					eadk_display_push_rect(rct, composed_buf[composed_index]);
+					/* switch buffer and clear the new active buffer */
+					composed_index ^= 1;
+					fill_composed_buf(composed_buf[composed_index], (COMPOSE_W * COMPOSE_H), eadk_color_white);
 				composed_blocks = 0;
 				if (current_band < (BANDS - 1)) current_band++;
 				else current_band = 0;
