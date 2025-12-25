@@ -46,6 +46,8 @@ ffmpeg -i input.mp4 -vf "scale=320:240:force_original_aspect_ratio=increase,sets
 | Shift | Change FPS    |
 | EXE   | Toggle debug  |
 
+It runs around ~35 fps on n0120, and around ~15 fps on n0110 and n0115
+
 ## 🛠️ Build the app
 
 I made tutorials here :
