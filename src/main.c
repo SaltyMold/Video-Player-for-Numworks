@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define ENABLE_STORAGE 1 // No storage for simulator
+#define ENABLE_STORAGE 0 // No storage for simulator
 
 #if ENABLE_STORAGE
 #include "libs/storage.h"
@@ -21,16 +21,16 @@ const uint32_t eadk_api_level  __attribute__((section(".rodata.eadk_api_level"))
 
 typedef struct {
 	const uint8_t* data;
-	size_t size;
-	size_t pos;
+	uint32_t size;
+	uint32_t pos;
 } memdev_t;
 
-static void fill_composed_buf(eadk_color_t *buf, size_t n, eadk_color_t val) {
+static void fill_composed_buf(eadk_color_t *buf, uint32_t n, eadk_color_t val) {
 	if (!buf || n == 0) return;
-	size_t i = 0;
+	uint32_t i = 0;
 	uint32_t v32 = ((uint32_t)val << 16) | (uint32_t)val;
 	uint32_t *p32 = (uint32_t *)buf;
-	size_t n32 = n / 2;
+	uint32_t n32 = n / 2;
 	for (i = 0; i < n32; i++) p32[i] = v32;
 	if (n & 1) buf[n - 1] = val;
 }
@@ -43,6 +43,8 @@ static size_t infunc(JDEC* jd, uint8_t* buff, size_t ndata) {
 	dev->pos += rc;
 	return rc;
 }
+
+
 
 static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 	if (!bitmap || !rect) return 0;
@@ -101,7 +103,7 @@ static int outfunc(JDEC* jd, void* bitmap, JRECT* rect) {
 					uint16_t *src_row = &src[row * w];
 					uint16_t col_max = w < max_col_bound ? w : max_col_bound;
 					if (!swap) {
-						memcpy(&dest_row[left], src_row, (size_t)col_max * sizeof(uint16_t));
+						memcpy(&dest_row[left], src_row, (uint32_t)col_max * sizeof(uint16_t));
 					} else {
 						for (uint16_t col = 0; col < col_max; col++) {
 							uint16_t pix = src_row[col];
@@ -187,7 +189,7 @@ int main(void) {
 
 	#if ENABLE_STORAGE 
 	if (extapp_fileExists(SVG_FILE)) {
-		size_t fps_len = 0;
+		uint32_t fps_len = 0;
 		const char* fps_data = extapp_fileRead(SVG_FILE, &fps_len);
 		if (fps_data != NULL && fps_len > 0) {
 			target_fps = (int)((uint8_t)fps_data[0]);
@@ -200,7 +202,7 @@ int main(void) {
 	#endif
 
 	for (;;) {
-		size_t p = 0;
+		uint32_t p = 0;
 		while (p + 1 < dev.size) {
 			bool debug = false;
 			eadk_keyboard_state_t state = eadk_keyboard_scan();
@@ -212,20 +214,20 @@ int main(void) {
 			
 			//----------------------------
 
-			size_t soi = (size_t)-1;
+			uint32_t soi = (uint32_t)-1;
 			for (; p + 1 < dev.size; p++) {
 				if (dev.data[p] == 0xFF && dev.data[p+1] == 0xD8) { soi = p; p += 2; break; }
 			}
-			if (soi == (size_t)-1) break;
+			if (soi == (uint32_t)-1) break;
 
-			size_t eoi = (size_t)-1;
+			uint32_t eoi = (uint32_t)-1;
 			for (; p + 1 < dev.size; p++) {
 				if (dev.data[p] == 0xFF && dev.data[p+1] == 0xD9) { eoi = p + 1; p += 2; break; }
 			}
-			if (eoi == (size_t)-1) break;
+			if (eoi == (uint32_t)-1) break;
 
-			size_t frame_start = soi;
-			size_t frame_len = eoi - soi + 1;
+			uint32_t frame_start = soi;
+			uint32_t frame_len = eoi - soi + 1;
 
 			memdev_t frame_dev;
 			frame_dev.data = dev.data + frame_start;
