@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define ENABLE_STORAGE 0 // No storage for simulator
+#define ENABLE_STORAGE 1 // No storage for simulator
 
 #if ENABLE_STORAGE
 #include "libs/storage.h"
