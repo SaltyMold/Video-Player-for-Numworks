@@ -19,15 +19,15 @@ _This is a simple video player app for the Numworks calculator._
 ## 📕 Install the app
 
 To install this app, you'll need to:
-1. Download the **`app.nwa` file**, which you can download from the [Releases](https://github.com/SaltyMold/Video-Player-for-Numworks/releases).
-2. Download a compatible video file in `MJPEG` format. You can take them from the [samples folder](https://github.com/SaltyMold/Video-Player-for-Numworks/tree/main/samples). Or convert your own videos using tools like FFmpeg with the instructions below.
+1. Download the **`VideoPlayer.nwa` file**, which you can download from the [Releases](https://github.com/SaltyMold/Video-Player-for-Numworks/releases).
+2. Download a compatible video file in `mjpeg` format. You can take them from the [samples folder](https://github.com/SaltyMold/Video-Player-for-Numworks/tree/main/samples). Or convert your own videos using tools like ffmpeg with the instructions below.
 3. Connect your **NumWorks calculator** to your computer using a USB cable.
 4. Head to **[my.numworks.com/apps](https://my.numworks.com/apps)** to send the **`nwa` file** on your calculator along the **`mjpeg` video**.
 
    
-### 🎞️ Converting videos to MJPEG format
+### 🎞️ Converting videos to mjpeg format
 
-Keep the resolution at 320×240. Adjust `-q:v` and `-fps` for quality and size.
+Keep the resolution at 320×240. Adjust `-q:v`, `fps=` and `-t` for quality, fps and time.
 
 With cropping:
 ```sh
@@ -44,7 +44,9 @@ ffmpeg -i input.mp4 -vf "scale=320:240:force_original_aspect_ratio=increase,sets
 |-------|---------------|
 | Back  | Quit app      |
 | Shift | Change FPS    |
-| EXE   | Toggle debug  |
+| EXE   | Debug mode    |
+
+It runs around ~35 fps on n0120, and around ~15 fps on n0110 and n0115
 
 ## 🛠️ Build the app
 
