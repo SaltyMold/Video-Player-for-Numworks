@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MJPEG Converter</title>
+  <script type="module" crossorigin src="./assets/index-Zyid3BgG.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-C4yKkvHM.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="label-tag">Client-side · WebAssembly</div>
+    <h1>Video → <span>MJPEG</span><br>Converter</h1>
+    <p class="subtitle">Traitement 100% navigateur — aucun serveur impliqué</p>
+  </header>
+
+  <div class="params">
+    <div class="param-group">
+      <div class="param-label">Qualité JPEG <span class="param-flag">-q:v</span></div>
+      <div class="param-input-wrap">
+        <input class="param-input" type="number" id="paramQv" value="24" min="2" max="31" step="1" />
+      </div>
+      <div class="param-range">2 (meilleure) → 31 (pire)</div>
+    </div>
+    <div class="param-group">
+      <div class="param-label">Fréquence <span class="param-flag">fps=</span></div>
+      <div class="param-input-wrap">
+        <input class="param-input" type="number" id="paramFps" value="15" min="1" max="60" step="1" />
+        <span class="param-unit">fps</span>
+      </div>
+      <div class="param-range">1 – 60 images/sec</div>
+    </div>
+    <div class="param-group">
+      <div class="param-label">Durée max <span class="param-flag">-t</span></div>
+      <div class="param-input-wrap">
+        <input class="param-input" type="number" id="paramDuration" value="30" min="1" max="3600" step="1" />
+        <span class="param-unit">sec</span>
+      </div>
+      <div class="param-range">1 – 3600 secondes</div>
+    </div>
+    <div class="param-group">
+      <div class="param-label">Redimensionnement</div>
+      <div class="param-input-wrap">
+        <div class="switch-wrap">
+          <span class="switch-label">Crop</span>
+          <label class="switch-container">
+            <input type="checkbox" id="paramCrop" class="switch-input" checked />
+            <div class="switch-toggle"></div>
+          </label>
+          <span class="switch-label">Scale</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cmd-block"><span class="kw">ffmpeg</span> -i <span class="dyn" id="prevInputFile">input.mp4</span> \
+  -vf <span class="comment">"</span><span id="prevVf">scale=320:240:force_original_aspect_ratio=increase,crop=320:240,setsar=1:1,fps=15</span><span class="comment">"</span> \
+  -t <span class="dyn" id="prevDuration">00:00:30</span> \
+  -vcodec mjpeg -q:v <span class="dyn" id="prevQv">24</span> -an \
+  <span class="dyn" id="prevOutputFile">output.mjpeg</span></div>
+
+  <div class="dropzone" id="dropzone">
+    <input type="file" id="fileInput" accept="video/*" />
+    <span class="dropzone-icon">🎬</span>
+    <div class="dropzone-text">
+      <strong>Déposer une vidéo ici</strong>
+      ou cliquer pour sélectionner un fichier
+    </div>
+  </div>
+
+  <div class="file-info" id="fileInfo">
+    <span class="file-icon">📼</span>
+    <div class="file-details">
+      <div class="file-name" id="fileName">—</div>
+      <div class="file-size" id="fileSize">—</div>
+    </div>
+  </div>
+
+  <button class="btn-convert" id="convertBtn" disabled>
+    <span>⚡</span> Convertir en MJPEG
+  </button>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-header">
+      <span id="progressLabel">Chargement de FFmpeg…</span>
+      <span id="progressPct">—</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill indeterminate" id="progressFill"></div>
+    </div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="result-box" id="resultBox">
+    <div class="result-title">✓ Conversion terminée</div>
+    <div class="result-content">
+      <div class="result-left">
+        <div class="result-stats">
+          <div class="stat">
+            <div class="stat-label">Taille sortie</div>
+            <div class="stat-value" id="outSize">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Format</div>
+            <div class="stat-value">MJPEG · 320×240 · <span id="resFps">15</span>fps</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Durée max</div>
+            <div class="stat-value"><span id="resDuration">30</span> sec</div>
+          </div>
+        </div>
+        <a class="btn-download" id="downloadLink" href="#" download="output.mjpeg">
+          ⬇ Télécharger <span id="downloadFileName">output.mjpeg</span>
+        </a>
+      </div>
+      <div class="result-preview">
+        <canvas id="previewCanvas" width="320" height="240" style="border: 1px solid var(--border); border-radius: 4px; background: #000; display: block;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">
+    <strong>Note :</strong> FFmpeg WASM (~30 MB) est chargé au premier lancement.
+    Traitement 100% local, aucun fichier envoyé sur un serveur.
+  </p>
+</div>
+<script>
+  // Register service worker for cross-origin isolation
+  // Note: Service worker only needed if running shared memory (multi-threaded FFmpeg)
+  // Not available with file:// protocol (local files)
+  if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+    navigator.serviceWorker.register('./coi-serviceworker.js', { scope: './' })
+      .then(reg => console.log('✓ Service Worker registered for CoOI'))
+      .catch(err => console.warn('⚠ Service Worker registration failed (optional):', err.message))
+  }
+</script>
+</body>
+</html>

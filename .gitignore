@@ -1,3 +1,4 @@
 .vscode/
 output/
 convert/input.mp4
+*node_modules/
