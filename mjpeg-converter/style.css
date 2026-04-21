@@ -221,6 +221,40 @@ h1 span { color: var(--accent); }
   color: var(--accent2);
 }
 
+/* Multi mode (right/checked) - slider to right */
+.switch-wrap.multi-mode .switch-toggle {
+  background: var(--accent2);
+}
+
+.switch-wrap.multi-mode .switch-toggle::after {
+  left: 26px;
+}
+
+.switch-wrap.multi-mode .switch-label:nth-child(1) {
+  color: var(--text);
+}
+
+.switch-wrap.multi-mode .switch-label:nth-child(3) {
+  color: var(--accent2);
+}
+
+/* Mono mode (left/unchecked) - slider to left */
+.switch-wrap.mono-mode .switch-toggle {
+  background: var(--accent2);
+}
+
+.switch-wrap.mono-mode .switch-toggle::after {
+  left: 2px;
+}
+
+.switch-wrap.mono-mode .switch-label:nth-child(1) {
+  color: var(--accent2);
+}
+
+.switch-wrap.mono-mode .switch-label:nth-child(3) {
+  color: var(--text);
+}
+
 .dropzone {
   border: 2px dashed var(--border);
   background: var(--surface);

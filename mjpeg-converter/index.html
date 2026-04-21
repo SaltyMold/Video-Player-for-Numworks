@@ -51,6 +51,20 @@
         </div>
       </div>
     </div>
+    <div class="param-group">
+      <div class="param-label">Threading</div>
+      <div class="param-input-wrap">
+        <div class="switch-wrap">
+          <span class="switch-label">Mono</span>
+          <label class="switch-container">
+            <input type="checkbox" id="paramMultithread" class="switch-input" />
+            <div class="switch-toggle"></div>
+          </label>
+          <span class="switch-label">Multi</span>
+        </div>
+      </div>
+      <div class="param-range">Multi peut ne pas marcher sur certains navigateurs</div>
+    </div>
   </div>
 
   <div class="cmd-block"><span class="kw">ffmpeg</span> -i <span class="dyn" id="prevInputFile">input.mp4</span> \

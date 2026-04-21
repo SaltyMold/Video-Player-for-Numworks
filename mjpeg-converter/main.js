@@ -22,6 +22,7 @@ const paramQv        = document.getElementById('paramQv')
 const paramFps       = document.getElementById('paramFps')
 const paramDuration  = document.getElementById('paramDuration')
 const paramCrop      = document.getElementById('paramCrop')
+const paramMultithread = document.getElementById('paramMultithread')
 const prevQv         = document.getElementById('prevQv')
 const prevVf         = document.getElementById('prevVf')
 const prevDuration   = document.getElementById('prevDuration')
@@ -126,6 +127,7 @@ function getParams() {
     fps:      clamp(parseInt(paramFps.value)      || 15, 1,    60),
     duration: clamp(parseInt(paramDuration.value) || 30, 1, 3600),
     crop:     paramCrop.checked,
+    multithread: paramMultithread.checked,
   }
 }
 
@@ -191,7 +193,7 @@ function handleFile(file) {
 
 // Handle switch toggle
 function updateSwitchUI() {
-  const switchWrap = document.querySelector('.switch-wrap')
+  const switchWrap = paramCrop.closest('.switch-wrap')
   if (paramCrop.checked) {
     switchWrap.classList.add('crop-mode')
     switchWrap.classList.remove('scale-mode')
@@ -202,19 +204,45 @@ function updateSwitchUI() {
   updatePreview()
 }
 
-paramCrop.addEventListener('change', updateSwitchUI)
+function updateMultithreadUI() {
+  const switchWrap = paramMultithread.closest('.switch-wrap')
+  if (paramMultithread.checked) {
+    switchWrap.classList.add('multi-mode')
+    switchWrap.classList.remove('mono-mode')
+  } else {
+    switchWrap.classList.remove('multi-mode')
+    switchWrap.classList.add('mono-mode')
+  }
+  updatePreview()
+}
 
-// Make switch toggle clickable
-const switchToggle = document.querySelector('.switch-toggle')
-if (switchToggle) {
-  switchToggle.addEventListener('click', (e) => {
+paramCrop.addEventListener('change', updateSwitchUI)
+paramMultithread.addEventListener('change', updateMultithreadUI)
+
+// Make crop switch toggle clickable
+const switchToggleCrop = paramCrop.closest('.switch-container').querySelector('.switch-toggle')
+if (switchToggleCrop) {
+  switchToggleCrop.addEventListener('click', (e) => {
+    console.log('Crop switch toggle clicked')
     e.preventDefault()
     paramCrop.checked = !paramCrop.checked
     paramCrop.dispatchEvent(new Event('change'))
   })
 }
 
+// Make multithread switch toggle clickable
+const switchToggleMulti = paramMultithread.closest('.switch-container').querySelector('.switch-toggle')
+if (switchToggleMulti) {
+  switchToggleMulti.addEventListener('click', (e) => {
+    console.log('Multithread switch toggle clicked')
+    e.preventDefault()
+    paramMultithread.checked = !paramMultithread.checked
+    paramMultithread.dispatchEvent(new Event('change'))
+  })
+}
+
 updateSwitchUI()
+updateMultithreadUI()
 
 fileInput.addEventListener('change', e => handleFile(e.target.files[0]))
 
@@ -257,22 +285,33 @@ async function loadFFmpeg() {
   // Store listener for later removal
   ffmpeg._progressListener = progressListener
 
-  // Check if SharedArrayBuffer is available
-  const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined'
+  // Check if SharedArrayBuffer is available and user wants multi-threading
+  const p = getParams()
+  const canUseMultithread = typeof SharedArrayBuffer !== 'undefined'
+  const wantMultithread = p.multithread
+  const useMultithread = canUseMultithread && wantMultithread
   
   let baseURL, loadConfig
-  if (hasSharedArrayBuffer) {
-    // Try multi-threaded core
-    addLog('SharedArrayBuffer disponible → core multi-thread', 'active')
+  if (useMultithread) {
+    // Multi-thread available and requested
+    addLog('Multi-thread activé → core multi-thread', 'active')
     baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/esm'
     loadConfig = {
       coreURL:   await toBlobURL(`${baseURL}/ffmpeg-core.js`,        'text/javascript'),
       wasmURL:   await toBlobURL(`${baseURL}/ffmpeg-core.wasm`,      'application/wasm'),
       workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
     }
+  } else if (wantMultithread && !canUseMultithread) {
+    // Multi-thread requested but not available
+    addLog('Multi-thread demandé mais indisponible → fallback mono-thread', 'active')
+    baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm'
+    loadConfig = {
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    }
   } else {
-    // Fallback to single-threaded core
-    addLog('SharedArrayBuffer indisponible → core mono-thread', 'active')
+    // Mono-thread (default)
+    addLog('Mono-thread sélectionné → core mono-thread', 'active')
     baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm'
     loadConfig = {
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
