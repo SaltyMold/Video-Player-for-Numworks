@@ -20,7 +20,8 @@ self.addEventListener('fetch', (e) => {
       
       const newResponse = response.clone()
       const clonedResponse = new Response(newResponse.body, newResponse)
-      clonedResponse.headers.append('Cross-Origin-Embedder-Policy', 'require-corp')
+      clonedResponse.headers.set("Cross-Origin-Embedder-Policy", "require-corp");
+      clonedResponse.headers.set("Cross-Origin-Opener-Policy", "same-origin");
       return clonedResponse
     }).catch(() => {
       return fetch(e.request)
