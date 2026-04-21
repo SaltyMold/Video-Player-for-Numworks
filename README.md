@@ -20,7 +20,7 @@ _This is a simple video player app for the Numworks calculator._
 
 To install this app, you'll need to:
 1. Download the **`VideoPlayer.nwa` file**, which you can download from the [Releases](https://github.com/SaltyMold/Video-Player-for-Numworks/releases).
-2. Download a compatible video file in `mjpeg` format. You can take them from the [samples folder](https://github.com/SaltyMold/Video-Player-for-Numworks/tree/main/samples). Or convert your own videos using tools like ffmpeg with the instructions below.
+2. Download a compatible video file in `mjpeg` format. You can take them from the [samples folder](https://github.com/SaltyMold/Video-Player-for-Numworks/tree/main/samples). Or convert your own videos using [this page](https://saltymold.github.io/Video-Player-for-Numworks/) or tools like ffmpeg with the instructions below.
 3. Connect your **NumWorks calculator** to your computer using a USB cable.
 4. Head to **[my.numworks.com/apps](https://my.numworks.com/apps)** to send the **`nwa` file** on your calculator along the **`mjpeg` video**.
 
