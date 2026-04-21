@@ -1,6 +1,6 @@
 <h1 align="center">Video-Player-for-Numworks</h1>
 <p align="center">
-    <img alt="Version" src="https://img.shields.io/badge/Version-1.1.1-blue?style=for-the-badge&color=blue">
+    <img alt="Version" src="https://img.shields.io/badge/Version-1.1.2-blue?style=for-the-badge&color=blue">
     <img alt="Stars" src="https://img.shields.io/github/stars/SaltyMold/Video-Player-for-Numworks?style=for-the-badge&color=magenta">
     <img alt="Forks" src="https://img.shields.io/github/forks/SaltyMold/Video-Player-for-Numworks?color=cyan&style=for-the-badge&color=purple">
     <img alt="License" src="https://img.shields.io/github/license/SaltyMold/Video-Player-for-Numworks?style=for-the-badge&color=blue">
