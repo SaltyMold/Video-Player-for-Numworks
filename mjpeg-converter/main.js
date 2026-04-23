@@ -144,9 +144,9 @@ function updatePreview() {
   
   // Build video filter string
   const vf = p.crop
-    ? `scale=320:240:force_original_aspect_ratio=increase,crop=320:240,setsar=1:1,fps=${p.fps}`
-    : `scale=320:240,setsar=1:1,fps=${p.fps}`
-  prevVf.textContent = vf
+    ? `scale=320:240:force_original_aspect_ratio=increase,crop=320:240,setsar=1:1,fps=<span class="fps-value">${p.fps}</span>`
+    : `scale=320:240,setsar=1:1,fps=<span class="fps-value">${p.fps}</span>`
+  prevVf.innerHTML = vf
 }
 
 function addLog(msg, type = '') {
@@ -253,7 +253,7 @@ dropzone.addEventListener('drop', e => {
   dropzone.classList.remove('drag-over')
   const file = e.dataTransfer.files[0]
   if (file?.type.startsWith('video/')) handleFile(file)
-  else showError('Veuillez déposer un fichier vidéo.')
+  else showError('Please drop a video file.')
 })
 
 // --- FFmpeg load ---
@@ -277,7 +277,7 @@ async function loadFFmpeg() {
     // Only update progress if conversion is in progress
     if (conversionInProgress) {
       const pct = Math.min(Math.round(progress * 100), 99)
-      setProgress('Conversion en cours…', pct)
+      setProgress('Converting...', pct)
     }
   }
   ffmpeg.on('progress', progressListener)
@@ -294,7 +294,7 @@ async function loadFFmpeg() {
   let baseURL, loadConfig
   if (useMultithread) {
     // Multi-thread available and requested
-    addLog('Multi-thread activé → core multi-thread', 'active')
+    addLog('Multi-thread enabled → multi-thread core', 'active')
     baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/esm'
     loadConfig = {
       coreURL:   await toBlobURL(`${baseURL}/ffmpeg-core.js`,        'text/javascript'),
@@ -303,7 +303,7 @@ async function loadFFmpeg() {
     }
   } else if (wantMultithread && !canUseMultithread) {
     // Multi-thread requested but not available
-    addLog('Multi-thread demandé mais indisponible → fallback mono-thread', 'active')
+    addLog('Multi-thread requested but unavailable → fallback to mono-thread', 'active')
     baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm'
     loadConfig = {
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
@@ -311,7 +311,7 @@ async function loadFFmpeg() {
     }
   } else {
     // Mono-thread (default)
-    addLog('Mono-thread sélectionné → core mono-thread', 'active')
+    addLog('Mono-thread selected → mono-thread core', 'active')
     baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm'
     loadConfig = {
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
@@ -342,15 +342,15 @@ convertBtn.addEventListener('click', async () => {
 
   try {
     if (!ffmpeg) {
-      setProgress('Chargement de FFmpeg WASM…')
-      addLog('Chargement du core multi-thread…', 'active')
+      setProgress('Loading FFmpeg WASM...')
+      addLog('Loading multi-thread core...', 'active')
       await loadFFmpeg()
-      addLog('FFmpeg chargé ✓', 'done')
+      addLog('FFmpeg loaded ✓', 'done')
     }
 
-    setProgress('Lecture du fichier…')
-    addLog(`Source : ${selectedFile.name} (${formatBytes(selectedFile.size)})`, 'active')
-    addLog(`Params → q:v=${p.qv}  fps=${p.fps}  durée=${secToHMS(p.duration)}  mode=${p.crop ? 'crop' : 'scale'}`, 'active')
+    setProgress('Reading file...')
+    addLog(`Source: ${selectedFile.name} (${formatBytes(selectedFile.size)})`, 'active')
+    addLog(`Params → q:v=${p.qv}  fps=${p.fps}  duration=${secToHMS(p.duration)}  mode=${p.crop ? 'crop' : 'scale'}`, 'active')
 
     const ext = selectedFile.name.substring(selectedFile.name.lastIndexOf('.'))
     const inputName = 'input' + ext
@@ -359,8 +359,8 @@ convertBtn.addEventListener('click', async () => {
 
     await ffmpeg.writeFile(inputName, await fetchFile(selectedFile))
 
-    setProgress('Conversion en cours…', 0)
-    addLog('Lancement MJPEG…', 'active')
+    setProgress('Converting...', 0)
+    addLog('Launching MJPEG...', 'active')
 
     try {
       // Try to delete any previous output file
@@ -411,7 +411,7 @@ convertBtn.addEventListener('click', async () => {
 
     const result = await Promise.race([execPromise, timeoutPromise, outputWaitPromise])
     if (result === 'timeout' || result === 'output_timeout') {
-      addLog('⚠ Conversion longue, passage à la finalisation…', 'active')
+      addLog('⚠ Long conversion, proceeding to finalization...', 'active')
     }
 
     console.log('✓ FFmpeg exec completed or timeout')
@@ -432,9 +432,9 @@ convertBtn.addEventListener('click', async () => {
     // Force UI to 100%
     progressFill.style.width = '100%'
     progressPct.textContent = '100%'
-    progressLabel.textContent = 'Finalisation…'
+    progressLabel.textContent = 'Finalizing...'
     
-    addLog('✓ Récupération du fichier…', 'done')
+    addLog('✓ Retrieving file...', 'done')
     console.log('✓ Progress set to 100%')
 
     // Read the output file with timeout and fallback
@@ -446,7 +446,7 @@ convertBtn.addEventListener('click', async () => {
       data = await Promise.race([readPromise, readTimeout])
       if (!data || data.length === 0) throw new Error('empty_output')
       console.log('✓ File read:', data.length, 'bytes')
-      addLog(`✓ Fichier lu: ${data.length} bytes`, 'active')
+      addLog(`✓ File read: ${data.length} bytes`, 'active')
     } catch (readErr) {
       console.warn('ffmpeg.readFile failed or timed out:', readErr)
       // Try low-level FS fallback if available
@@ -456,7 +456,7 @@ convertBtn.addEventListener('click', async () => {
           data = ffmpeg.FS('readFile', outputName)
           if (data && data.length > 0) {
             console.log('✓ FS fallback read:', data.length, 'bytes')
-            addLog(`✓ Fallback fichier lu: ${data.length} bytes`, 'active')
+            addLog(`✓ Fallback file read: ${data.length} bytes`, 'active')
           }
         }
       } catch (fsErr) {
@@ -465,18 +465,18 @@ convertBtn.addEventListener('click', async () => {
     }
 
     if (!data || data.length === 0) {
-      showError('Impossible de lire le fichier de sortie (' + outputName + ')')
-      addLog('Erreur : lecture du fichier de sortie impossible', 'err')
+      showError('Unable to read output file (' + outputName + ')')
+      addLog('Error: unable to read output file', 'err')
       throw new Error('No output data')
     }
     
     const blob = new Blob([data], { type: 'video/x-motion-jpeg' })
     console.log('✓ Blob created:', blob.size, 'bytes')
-    addLog(`✓ Blob créé: ${blob.size} bytes`, 'active')
+    addLog(`✓ Blob created: ${blob.size} bytes`, 'active')
     
     const url = URL.createObjectURL(blob)
     console.log('✓ Object URL created')
-    addLog('✓ URL d\'objet créée', 'active')
+    addLog('✓ Object URL created', 'active')
 
     // Update download button
     downloadLink.href = url
@@ -498,8 +498,8 @@ convertBtn.addEventListener('click', async () => {
     
     console.log('✓ UI updated, conversion complete')
     
-    addLog(`✓ Prêt pour téléchargement: ${formatBytes(blob.size)}`, 'done')
-    setProgress('Terminé !', 100)
+    addLog(`✓ Ready for download: ${formatBytes(blob.size)}`, 'done')
+    setProgress('Done!', 100)
 
     await ffmpeg.deleteFile(inputName)
     await ffmpeg.deleteFile(outputName)
@@ -507,8 +507,8 @@ convertBtn.addEventListener('click', async () => {
   } catch (err) {
     console.error(err)
     showError(err.message || String(err))
-    addLog('Erreur : ' + (err.message || String(err)), 'err')
-    setProgress('Erreur')
+    addLog('Error: ' + (err.message || String(err)), 'err')
+    setProgress('Error')
   } finally {
     conversionInProgress = false
     convertBtn.disabled = false

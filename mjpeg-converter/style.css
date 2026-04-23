@@ -91,6 +91,7 @@ h1 span { color: var(--accent); }
 .cmd-block .kw { color: var(--accent); }
 .cmd-block .comment { color: #444; }
 .cmd-block .dyn { color: var(--accent2); font-weight: bold; }
+.cmd-block .fps-value { color: var(--accent2); font-weight: bold; }
 
 .params {
   display: grid;

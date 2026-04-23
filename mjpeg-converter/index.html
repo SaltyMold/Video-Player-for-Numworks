@@ -11,35 +11,35 @@
   <header>
     <div class="label-tag">Client-side · WebAssembly</div>
     <h1>Video → <span>MJPEG</span><br>Converter</h1>
-    <p class="subtitle">Traitement 100% navigateur — aucun serveur impliqué</p>
+    <p class="subtitle">100% browser processing — no server involved</p>
   </header>
 
   <div class="params">
     <div class="param-group">
-      <div class="param-label">Qualité JPEG <span class="param-flag">-q:v</span></div>
+      <div class="param-label">JPEG Quality <span class="param-flag">-q:v</span></div>
       <div class="param-input-wrap">
         <input class="param-input" type="number" id="paramQv" value="24" min="2" max="31" step="1" />
       </div>
-      <div class="param-range">2 (meilleure) → 31 (pire)</div>
+      <div class="param-range">2 (best) → 31 (worst)</div>
     </div>
     <div class="param-group">
-      <div class="param-label">Fréquence <span class="param-flag">fps=</span></div>
+      <div class="param-label">Frequency <span class="param-flag">fps=</span></div>
       <div class="param-input-wrap">
         <input class="param-input" type="number" id="paramFps" value="15" min="1" max="60" step="1" />
         <span class="param-unit">fps</span>
       </div>
-      <div class="param-range">1 – 60 images/sec</div>
+      <div class="param-range">1 – 60 frames/sec</div>
     </div>
     <div class="param-group">
-      <div class="param-label">Durée max <span class="param-flag">-t</span></div>
+      <div class="param-label">Max Duration <span class="param-flag">-t</span></div>
       <div class="param-input-wrap">
         <input class="param-input" type="number" id="paramDuration" value="30" min="1" max="3600" step="1" />
         <span class="param-unit">sec</span>
       </div>
-      <div class="param-range">1 – 3600 secondes</div>
+      <div class="param-range">1 – 3600 seconds</div>
     </div>
     <div class="param-group">
-      <div class="param-label">Redimensionnement</div>
+      <div class="param-label">Resizing</div>
       <div class="param-input-wrap">
         <div class="switch-wrap">
           <span class="switch-label">Crop</span>
@@ -63,12 +63,12 @@
           <span class="switch-label">Multi</span>
         </div>
       </div>
-      <div class="param-range">Multi peut ne pas marcher sur certains navigateurs</div>
+      <div class="param-range">Multi may not work on some browsers</div>
     </div>
   </div>
 
   <div class="cmd-block"><span class="kw">ffmpeg</span> -i <span class="dyn" id="prevInputFile">input.mp4</span> \
-  -vf <span class="comment">"</span><span id="prevVf">scale=320:240:force_original_aspect_ratio=increase,crop=320:240,setsar=1:1,fps=15</span><span class="comment">"</span> \
+  -vf <span class="comment">"</span><span id="prevVf">scale=320:240:force_original_aspect_ratio=increase,crop=320:240,setsar=1:1,fps=<span class="fps-value">15</span></span><span class="comment">"</span> \
   -t <span class="dyn" id="prevDuration">00:00:30</span> \
   -vcodec mjpeg -q:v <span class="dyn" id="prevQv">24</span> -an \
   <span class="dyn" id="prevOutputFile">output.mjpeg</span></div>
@@ -77,8 +77,8 @@
     <input type="file" id="fileInput" accept="video/*" />
     <span class="dropzone-icon">🎬</span>
     <div class="dropzone-text">
-      <strong>Déposer une vidéo ici</strong>
-      ou cliquer pour sélectionner un fichier
+      <strong>Drop a video here</strong>
+      or click to select a file
     </div>
   </div>
 
@@ -91,12 +91,12 @@
   </div>
 
   <button class="btn-convert" id="convertBtn" disabled>
-    <span>⚡</span> Convertir en MJPEG
+    <span>⚡</span> Convert to MJPEG
   </button>
 
   <div class="progress-wrap" id="progressWrap">
     <div class="progress-header">
-      <span id="progressLabel">Chargement de FFmpeg…</span>
+      <span id="progressLabel">Loading FFmpeg…</span>
       <span id="progressPct">—</span>
     </div>
     <div class="progress-bar-bg">
@@ -108,12 +108,12 @@
   <div class="error-box" id="errorBox"></div>
 
   <div class="result-box" id="resultBox">
-    <div class="result-title">✓ Conversion terminée</div>
+    <div class="result-title">✓ Conversion complete</div>
     <div class="result-content">
       <div class="result-left">
         <div class="result-stats">
           <div class="stat">
-            <div class="stat-label">Taille sortie</div>
+            <div class="stat-label">Output size</div>
             <div class="stat-value" id="outSize">—</div>
           </div>
           <div class="stat">
@@ -121,12 +121,12 @@
             <div class="stat-value">MJPEG · 320×240 · <span id="resFps">15</span>fps</div>
           </div>
           <div class="stat">
-            <div class="stat-label">Durée max</div>
+            <div class="stat-label">Max duration</div>
             <div class="stat-value"><span id="resDuration">30</span> sec</div>
           </div>
         </div>
         <a class="btn-download" id="downloadLink" href="#" download="output.mjpeg">
-          ⬇ Télécharger <span id="downloadFileName">output.mjpeg</span>
+          ⬇ Download <span id="downloadFileName">output.mjpeg</span>
         </a>
       </div>
       <div class="result-preview">
@@ -136,8 +136,8 @@
   </div>
 
   <p class="note">
-    <strong>Note :</strong> FFmpeg WASM (~30 MB) est chargé au premier lancement.
-    Traitement 100% local, aucun fichier envoyé sur un serveur.
+    <strong>Note:</strong> FFmpeg WASM (~30 MB) is loaded on first launch.
+    100% local processing, no files sent to a server.
   </p>
 </div>
 <script>
