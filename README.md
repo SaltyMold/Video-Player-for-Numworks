@@ -16,7 +16,7 @@ _This is a simple video player app for the Numworks calculator._
 |----------|--------|
 | <img src="https://github.com/user-attachments/assets/73ac20ed-aa3b-43c1-b8ff-2c6eefd35902" width="200" alt="Rickroll"> | <img src="https://github.com/user-attachments/assets/1dc0c5ae-7666-4559-8f90-535b9280fde1" width="200" alt="Matrix"> |
 
-## 📕 Install the app
+## Install the app
 
 To install this app, you'll need to:
 1. Download the **`VideoPlayer.nwa` file**, which you can download from the [Releases](https://github.com/SaltyMold/Video-Player-for-Numworks/releases).
@@ -25,7 +25,7 @@ To install this app, you'll need to:
 4. Head to **[my.numworks.com/apps](https://my.numworks.com/apps)** to send the **`nwa` file** on your calculator along the **`mjpeg` video**.
 
    
-### 🎞️ Converting videos to mjpeg format
+### Converting videos to mjpeg format
 
 Keep the resolution at 320×240. Adjust `-q:v`, `fps=` and `-t` for quality, fps and time.
 
@@ -38,7 +38,7 @@ Without cropping:
 ffmpeg -i input.mp4 -vf "scale=320:240:force_original_aspect_ratio=increase,setsar=1:1,fps=15" -t 00:00:30 -vcodec mjpeg -q:v 24 -an output.mjpeg
 ```
 
-## 📕 How to use the app
+## How to use the app
 
 | Key   | Action        |
 |-------|---------------|
@@ -48,7 +48,7 @@ ffmpeg -i input.mp4 -vf "scale=320:240:force_original_aspect_ratio=increase,sets
 
 It runs around ~35 fps on n0120, and around ~15 fps on n0110 and n0115
 
-## 🛠️ Build the app
+## Build the app
 
 I made tutorials here :
 - [C-App-Guide-for-Numworks](https://github.com/SaltyMold/C-App-Guide-for-Numworks)
